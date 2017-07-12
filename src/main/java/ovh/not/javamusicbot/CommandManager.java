@@ -6,6 +6,7 @@ import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.core.entities.Member;
 import ovh.not.javamusicbot.command.*;
+import ovh.not.javamusicbot.manager.ShardManager;
 
 import java.util.HashMap;
 import java.util.Map;

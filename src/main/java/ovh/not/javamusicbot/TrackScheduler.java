@@ -2,65 +2,45 @@ package ovh.not.javamusicbot;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
+import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
-import net.dv8tion.jda.core.entities.TextChannel;
-
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import ovh.not.javamusicbot.manager.GuildManager;
 
 public class TrackScheduler extends AudioEventAdapter {
-    private final GuildMusicManager musicManager;
-    private final AudioPlayer player;
-    TextChannel textChannel;
-    public final Queue<AudioTrack> queue;
-    public boolean repeat = false;
-    public boolean loop = false;
+    private final GuildManager guildManager;
 
-    TrackScheduler(GuildMusicManager musicManager, AudioPlayer player, TextChannel textChannel) {
-        this.musicManager = musicManager;
-        this.player = player;
-        this.textChannel = textChannel;
-        this.queue = new LinkedList<>();
-    }
-
-    @SuppressWarnings("unchecked")
-    public void queue(AudioTrack track, boolean... first) {
-        if (!player.startTrack(track, true)) {
-            if (first != null && first.length > 0 && first[0]) {
-                ((List<AudioTrack>) queue).add(0, track);
-            } else {
-                queue.offer(track);
-            }
-        }
-    }
-
-    public void next(AudioTrack last) {
-        AudioTrack track;
-        if (repeat && last != null) {
-            track = last.makeClone();
-        } else {
-            if (loop && last != null) {
-                queue.add(last.makeClone());
-            }
-            track = queue.poll();
-        }
-        if (!player.startTrack(track, false)) {
-            musicManager.close();
-        }
+    public TrackScheduler(GuildManager guildManager) {
+        this.guildManager = guildManager;
     }
 
     @Override
-    public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
-        if (endReason.mayStartNext) {
-            next(track);
-        }
+    public void onPlayerPause(AudioPlayer player) {
+        super.onPlayerPause(player);
+    }
+
+    @Override
+    public void onPlayerResume(AudioPlayer player) {
+        super.onPlayerResume(player);
     }
 
     @Override
     public void onTrackStart(AudioPlayer player, AudioTrack track) {
-        textChannel.sendMessage(String.format("Now playing **%s** by **%s** `[%s]`", track.getInfo().title,
-                track.getInfo().author, Utils.formatDuration(track.getDuration()))).complete();
+        super.onTrackStart(player, track);
+    }
+
+    @Override
+    public void onTrackEnd(AudioPlayer player, AudioTrack track, AudioTrackEndReason endReason) {
+        super.onTrackEnd(player, track, endReason);
+    }
+
+    @Override
+    public void onTrackException(AudioPlayer player, AudioTrack track, FriendlyException exception) {
+        super.onTrackException(player, track, exception);
+    }
+
+    @Override
+    public void onTrackStuck(AudioPlayer player, AudioTrack track, long thresholdMs) {
+        super.onTrackStuck(player, track, thresholdMs);
     }
 }

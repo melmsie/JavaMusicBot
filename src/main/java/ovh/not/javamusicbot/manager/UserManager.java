@@ -1,10 +1,10 @@
-package ovh.not.javamusicbot;
+package ovh.not.javamusicbot.manager;
 
-import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.entities.Guild;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.Role;
 import net.dv8tion.jda.core.entities.User;
+import ovh.not.javamusicbot.Config;
 
 import java.util.List;
 
@@ -16,7 +16,7 @@ public class UserManager {
     private final Role superDuperSupporter;
 
     UserManager(Config config, ShardManager shardManager) {
-        guild = shardManager.getGuild(config.discordServer);
+        guild = shardManager.findGuild(config.discordServer);
         self = guild.getSelfMember().getUser();
         supporter = guild.getRoleById(config.supporterRole);
         superSupporter = guild.getRoleById(config.superSupporterRole);

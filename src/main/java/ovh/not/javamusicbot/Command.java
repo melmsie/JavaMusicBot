@@ -3,6 +3,7 @@ package ovh.not.javamusicbot;
 import net.dv8tion.jda.core.entities.Message;
 import net.dv8tion.jda.core.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.core.exceptions.PermissionException;
+import ovh.not.javamusicbot.manager.ShardManager;
 
 import java.util.HashSet;
 import java.util.Set;

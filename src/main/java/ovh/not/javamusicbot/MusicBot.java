@@ -7,6 +7,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.HttpClients;
+import ovh.not.javamusicbot.manager.ShardManager;
 
 import java.io.File;
 
@@ -22,13 +23,13 @@ public final class MusicBot {
         RequestConfig requestConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
         HttpClient httpClient = HttpClients.custom().setDefaultRequestConfig(requestConfig).build();
         Unirest.setHttpClient(httpClient);
-        if (args.length == 0) {
-            new ShardManager(config, constants);
-            return;
+
+        ShardManager.Builder builder = new ShardManager.Builder(config);
+        if (args.length > 0) {
+            builder.useSharding(true)
+                    .withShardCount(Integer.parseInt(args[0]))
+                    .withShardRange(Integer.parseInt(args[1]), Integer.parseInt(args[2]));
         }
-        int shardCount = Integer.parseInt(args[0]);
-        int minShard = Integer.parseInt(args[1]);
-        int maxShard = Integer.parseInt(args[2]);
-        new ShardManager(config, constants, shardCount, minShard, maxShard);
+        ShardManager shardManager = builder.build();
     }
 }
