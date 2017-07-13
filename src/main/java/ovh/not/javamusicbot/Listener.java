@@ -12,21 +12,24 @@ import net.dv8tion.jda.core.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.core.exceptions.PermissionException;
 import net.dv8tion.jda.core.hooks.ListenerAdapter;
 import org.json.JSONObject;
+import ovh.not.javamusicbot.manager.GuildManager;
 import ovh.not.javamusicbot.manager.ShardManager;
+import ovh.not.javamusicbot.manager.VoiceManager;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-class Listener extends ListenerAdapter {
+public class Listener extends ListenerAdapter {
     private static final String CARBON_DATA_URL = "https://www.carbonitex.net/discord/data/botdata.php";
     private static final String DBOTS_STATS_URL = "https://bots.discord.pw/api/bots/%s/stats";
     private static final String DBOTS_ORG_STATS_URL = "https://discordbots.org/api/bots/%s/stats";
+
     private final Config config;
     private final CommandManager commandManager;
     private final ShardManager.Shard shard;
     private final Pattern commandPattern;
 
-    Listener(Config config, CommandManager commandManager, ShardManager.Shard shard) {
+    public Listener(Config config, CommandManager commandManager, ShardManager.Shard shard) {
         this.config = config;
         this.commandManager = commandManager;
         this.commandPattern = Pattern.compile(config.regex);
@@ -39,22 +42,24 @@ class Listener extends ListenerAdapter {
         if (author.isBot() || author.getId().equalsIgnoreCase(event.getJDA().getSelfUser().getId())) {
             return;
         }
+
         String content = event.getMessage().getContent();
         Matcher matcher = commandPattern.matcher(content.replace("\r", " ").replace("\n", " "));
         if (!matcher.find()) {
             return;
         }
+
         if (!event.getGuild().getSelfMember().hasPermission(event.getTextChannel(), Permission.MESSAGE_WRITE)) {
             return;
         }
+
         String name = matcher.group(1).toLowerCase();
         Command command = commandManager.getCommand(name);
         if (command == null) {
             return;
         }
-        Command.Context context = command.new Context();
-        context.event = event;
-        context.shard = shard;
+
+        Command.Context context = new Command.Context(event, shard);
         if (matcher.groupCount() > 1) {
             String[] matches = matcher.group(2).split("\\s+");
             if (matches.length > 0 && matches[0].equals("")) {
@@ -62,6 +67,7 @@ class Listener extends ListenerAdapter {
             }
             context.args = matches;
         }
+
         command.on(context);
     }
 
@@ -75,7 +81,7 @@ class Listener extends ListenerAdapter {
         }
         if (config.patreon) {
             for (Member member : event.getGuild().getMembers()) {
-                if ((shard.manager.userManager.hasSupporter(member.getUser())
+                if ((shard.getShardManager().getUserManager().hasSupporter(member.getUser())
                         && (member.isOwner() || member.hasPermission(Permission.ADMINISTRATOR))) || member.getUser().getId().equals("87164639695110144")) {
                     return;
                 }
@@ -133,12 +139,11 @@ class Listener extends ListenerAdapter {
 
     @Override
     public void onGuildLeave(GuildLeaveEvent event) {
-        if (GuildMusicManager.GUILDS.containsKey(event.getGuild())) {
-            GuildMusicManager musicManager = GuildMusicManager.GUILDS.remove(event.getGuild());
-            musicManager.player.stopTrack();
-            musicManager.scheduler.queue.clear();
-            musicManager.close();
-        }
-        event.getGuild().getAudioManager().closeAudioConnection();
+        GuildManager guildManager = shard.getGuildManager(event.getGuild());
+        VoiceManager voiceManager = guildManager.getVoiceManager();
+
+        guildManager.getQueueManager().clear();
+        voiceManager.getAudioPlayer().stopTrack();
+        voiceManager.close();
     }
 }

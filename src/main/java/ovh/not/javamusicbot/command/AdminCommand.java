@@ -19,7 +19,7 @@ public class AdminCommand extends Command {
     private final Config config;
     private final String subCommandsString;
 
-    public AdminCommand(Config config, ShardManager.Shard shard, AudioPlayerManager playerManager) {
+    public AdminCommand(Config config, AudioPlayerManager playerManager) {
         super("admin", "a");
         hide = true;
         this.config = config;

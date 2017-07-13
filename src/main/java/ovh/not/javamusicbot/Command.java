@@ -25,14 +25,19 @@ public abstract class Command {
 
     public abstract void on(Context context);
 
-    protected class Context {
-        public MessageReceivedEvent event;
-        public ShardManager.Shard shard;
-        public String[] args;
+    protected static class Context {
+        public final MessageReceivedEvent event;
+        public final ShardManager.Shard shard;
+        public String[] args = null;
+
+        public Context(MessageReceivedEvent event, ShardManager.Shard shard) {
+            this.event = event;
+            this.shard = shard;
+        }
 
         public Message reply(String message) {
             try {
-                return event.getChannel().sendMessage(message.replace("%prefix%", shard.config.prefix)).complete();
+                return event.getChannel().sendMessage(message.replace("%prefix%", shard.getConfig().prefix)).complete();
             } catch (PermissionException e) {
                 getPrivateChannel(event.getAuthor()).sendMessage("**dabBot does not have permission to talk in the #"
                         + event.getTextChannel().getName() + " text channel.**\nTo fix this, allow dabBot to " +

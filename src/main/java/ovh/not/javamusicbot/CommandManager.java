@@ -4,6 +4,7 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import com.sun.xml.internal.bind.v2.runtime.reflect.opt.Const;
 import net.dv8tion.jda.core.entities.Member;
 import ovh.not.javamusicbot.command.*;
 import ovh.not.javamusicbot.manager.ShardManager;
@@ -15,12 +16,13 @@ public class CommandManager {
     public final Map<String, Command> commands = new HashMap<>();
     public final Map<Member, Selection<AudioTrack, String>> selectors = new HashMap<>();
 
-    CommandManager(Config config, Constants constants, ShardManager.Shard shard) {
+    public CommandManager(Config config) {
+        Constants constants = config.constants;
         AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
         AudioSourceManagers.registerRemoteSources(playerManager);
         CommandManager.register(commands,
                 new AboutCommand(config),
-                new AdminCommand(config, shard, playerManager),
+                new AdminCommand(config, playerManager),
                 new ChooseCommand(this),
                 new DiscordFMCommand(this, playerManager),
                 new DumpCommand(playerManager, config),

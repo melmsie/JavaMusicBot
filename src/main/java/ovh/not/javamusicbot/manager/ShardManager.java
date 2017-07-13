@@ -1,18 +1,91 @@
 package ovh.not.javamusicbot.manager;
 
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import net.dv8tion.jda.core.AccountType;
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.JDABuilder;
 import net.dv8tion.jda.core.entities.Game;
 import net.dv8tion.jda.core.entities.Guild;
 import net.dv8tion.jda.core.exceptions.RateLimitedException;
+import ovh.not.javamusicbot.CommandManager;
 import ovh.not.javamusicbot.Config;
+import ovh.not.javamusicbot.Listener;
 
 import javax.security.auth.login.LoginException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class ShardManager {
+    private final AudioPlayerManager audioPlayerManager = new DefaultAudioPlayerManager();
+
+    private final Config config;
+    private final Shard[] shards;
+    private final UserManager userManager;
+    private final CommandManager commandManager;
+
+    private ShardManager(Config config) {
+        this.config = config;
+        this.shards = new Shard[] { new Shard(this, config) };
+        this.userManager = new UserManager(config, this);
+        this.commandManager = new CommandManager(config);
+    }
+
+    private ShardManager(Config config, int shardCount, int shardRangeMin, int shardRangeMax) {
+        this.config = config;
+        this.shards = new Shard[(shardRangeMax - shardRangeMin) + 1];
+        int index = 0;
+        for (int shardId = shardRangeMin; shardId < shardRangeMax + 1;) {
+            System.out.println("Starting shard " + shardId + "..."); // todo logging
+            Shard shard = new Shard(shardId, this, config, shardCount);
+            shards[index] = shard;
+            shardId++;
+            index++;
+        }
+        this.userManager = new UserManager(config, this);
+        this.commandManager = new CommandManager(config);
+    }
+
+    public void restart(int shardId) {
+        for (Shard shard : shards) {
+            if (shard.id == shardId) {
+                shard.restart();
+                return;
+            }
+        }
+    }
+
+    public void setGame(String gameName) {
+        Game game = Game.of(gameName);
+        for (Shard shard : shards) {
+            shard.jda.getPresence().setGame(game);
+        }
+    }
+
+    public Map<Shard, JDA.Status> getStatuses() {
+        Map<Shard, JDA.Status> statuses = new HashMap<>();
+        for (Shard shard : shards) {
+            statuses.put(shard, shard.jda.getStatus());
+        }
+        return statuses;
+    }
+
+    // yuck sharing guild instances across threads :eyes:
+    public Guild findGuild(String id) {
+        for (Shard shard : shards) {
+            Guild guild = shard.jda.getGuildById(id);
+            if (guild != null) {
+                return guild;
+            }
+        }
+        return null;
+    }
+
+    public UserManager getUserManager() {
+        return userManager;
+    }
+
     public static class Builder {
         private final Config config;
         private boolean useSharding;
@@ -50,14 +123,17 @@ public class ShardManager {
     }
 
     public class Shard {
+        private final Map<Guild, GuildManager> guildManagers = new LinkedHashMap<>();
+
         private final int id;
         private final ShardManager shardManager;
         private final Config config;
         private final int shardCount;
+
         private JDA jda = null;
 
-        private Shard(int id, ShardManager shardManager, Config config) {
-            this.id = id;
+        private Shard(ShardManager shardManager, Config config) {
+            this.id = 0;
             this.shardManager = shardManager;
             this.config = config;
             this.shardCount = 0;
@@ -70,11 +146,15 @@ public class ShardManager {
             this.shardCount = shardCount;
         }
 
+        public GuildManager getGuildManager(Guild guild) {
+            return guildManagers.computeIfAbsent(guild, g -> new GuildManager(g, audioPlayerManager));
+        }
+
         private void create() {
             JDABuilder jdaBuilder = new JDABuilder(AccountType.BOT)
                     .setToken(config.token)
                     .setGame(Game.of(String.format("%shelp | [%d/%d]", config.prefix, id, shardCount)))
-                    .addEventListener(null); // todo add listener
+                    .addEventListener(new Listener(config, commandManager, this));
 
             if (shardCount != 0) {
                 jdaBuilder.useSharding(id, shardCount);
@@ -96,61 +176,13 @@ public class ShardManager {
 
             System.out.println("Shard " + id + " restarted!");
         }
-    }
 
-    private final Config config;
-    private final Shard[] shards;
-
-    private ShardManager(Config config) {
-        this.config = config;
-        this.shards = new Shard[1];
-    }
-
-    private ShardManager(Config config, int shardCount, int shardRangeMin, int shardRangeMax) {
-        this.config = config;
-        this.shards = new Shard[(shardRangeMax - shardRangeMin) + 1];
-        int index = 0;
-        for (int shardId = shardRangeMin; shardId < shardRangeMax + 1;) {
-            System.out.println("Starting shard " + shardId + "..."); // todo logging
-            Shard shard = new Shard(shardId, this, config, shardCount);
-            shards[index] = shard;
-            shardId++;
-            index++;
+        public ShardManager getShardManager() {
+            return shardManager;
         }
-    }
 
-    public void restart(int shardId) {
-        for (Shard shard : shards) {
-            if (shard.id == shardId) {
-                shard.restart();
-                return;
-            }
+        public Config getConfig() {
+            return config;
         }
-    }
-
-    public void setGame(String gameName) {
-        Game game = Game.of(gameName);
-        for (Shard shard : shards) {
-            shard.jda.getPresence().setGame(game);
-        }
-    }
-
-    public Map<Shard, JDA.Status> getStatuses() {
-        Map<Shard, JDA.Status> statuses = new HashMap<>();
-        for (Shard shard : shards) {
-            statuses.put(shard, shard.jda.getStatus());
-        }
-        return statuses;
-    }
-
-    // yuck sharing guild instances across threads :eyes:
-    public Guild findGuild(String id) {
-        for (Shard shard : shards) {
-            Guild guild = shard.jda.getGuildById(id);
-            if (guild != null) {
-                return guild;
-            }
-        }
-        return null;
     }
 }

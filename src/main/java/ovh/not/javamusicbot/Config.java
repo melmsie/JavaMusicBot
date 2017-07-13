@@ -18,4 +18,5 @@ public class Config {
     public String superSupporterRole;
     public String superDuperSupporterRole;
     public String owoKey;
+    public Constants constants;
 }

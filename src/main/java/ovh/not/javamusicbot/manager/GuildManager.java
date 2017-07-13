@@ -16,19 +16,19 @@ public class GuildManager {
         queueManager = new QueueManager(this);
     }
 
-    Guild getGuild() {
+    public Guild getGuild() {
         return guild;
     }
 
-    VoiceManager getVoiceManager() {
+    public VoiceManager getVoiceManager() {
         return voiceManager;
     }
 
-    AnnouncementsManager getAnnouncementsManager() {
+    public AnnouncementsManager getAnnouncementsManager() {
         return announcementsManager;
     }
 
-    QueueManager getQueueManager() {
+    public QueueManager getQueueManager() {
         return queueManager;
     }
 }
