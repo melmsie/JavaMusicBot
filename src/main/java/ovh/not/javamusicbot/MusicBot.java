@@ -19,15 +19,15 @@ public final class MusicBot {
 
     public static void main(String[] args) {
         Config config = new Toml().read(new File(CONFIG_PATH)).to(Config.class);
-        Constants constants = new Toml().read(new File(CONSTANTS_PATH)).to(Constants.class);
+        config.constants = new Toml().read(new File(CONSTANTS_PATH)).to(Constants.class); // lol im so fucking lazy
+
         RequestConfig requestConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
         HttpClient httpClient = HttpClients.custom().setDefaultRequestConfig(requestConfig).build();
         Unirest.setHttpClient(httpClient);
 
         ShardManager.Builder builder = new ShardManager.Builder(config);
         if (args.length > 0) {
-            builder.useSharding(true)
-                    .withShardCount(Integer.parseInt(args[0]))
+            builder.useSharding(true).withShardCount(Integer.parseInt(args[0]))
                     .withShardRange(Integer.parseInt(args[1]), Integer.parseInt(args[2]));
         }
         ShardManager shardManager = builder.build();
