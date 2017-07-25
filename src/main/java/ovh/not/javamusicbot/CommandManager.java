@@ -32,7 +32,7 @@ public class CommandManager {
         playerManager.registerSourceManager(new VimeoAudioSourceManager());
         playerManager.registerSourceManager(new TwitchStreamAudioSourceManager());
         playerManager.registerSourceManager(new BeamAudioSourceManager());
-        playerManager.registerSourceManager(new HttpAudioSourceManager());
+        playerManager.registerSourceManager(new WhitelistedHttpAudioSourceManager(constants));
 
         CommandManager.register(commands,
                 new AboutCommand(config),

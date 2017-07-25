@@ -79,7 +79,9 @@ public class LoadResultHandler implements AudioLoadResultHandler {
         if (verbose) {
             if (isSearch) {
                 context.reply("No song matches found! Usage: `%prefix%play <link or youtube video title>` or " +
-                        "`%prefix%soundcloud <soundcloud song title>`");
+                        "`%prefix%soundcloud <soundcloud song title>`\n\nif you tried to play an http stream we no " +
+                        "longer allow all urls due to DDoS attacks. If you'd like a stream whitelisted please come " +
+                        "to the support server with `!!!support` and request for it to be added.");
                 if (context.event.getGuild().getAudioManager().isConnected() &&
                         musicManager.player.getPlayingTrack() == null && musicManager.scheduler.queue.size() == 0) {
                     musicManager.close();
