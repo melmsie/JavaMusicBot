@@ -19,6 +19,10 @@ public final class MusicBot {
     private static ConfigLoadResult configs = null;
 
     public static void main(String[] args) {
+
+        Cluster cluster = new Cluster(getConfigs().config);
+        cluster.run();
+
         RequestConfig requestConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
         HttpClient httpClient = HttpClients.custom().setDefaultRequestConfig(requestConfig).build();
         Unirest.setHttpClient(httpClient);

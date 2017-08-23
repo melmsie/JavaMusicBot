@@ -19,4 +19,7 @@ public class Config {
     String superSupporterRole;
     String superDuperSupporterRole;
     public String owoKey;
+    String bandoAddress;
+    int bandoPort;
+    String bandoKey;
 }
