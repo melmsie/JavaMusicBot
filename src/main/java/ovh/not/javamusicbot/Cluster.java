@@ -2,13 +2,11 @@ package ovh.not.javamusicbot;
 
 import com.google.gson.Gson;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.charset.Charset;
 
 public class Cluster implements Runnable {
     // this is the same buffer sized used in bando
@@ -42,12 +40,10 @@ public class Cluster implements Runnable {
                     reconnectPause = initialReconnectPause;
                 }
 
-                // open output stream
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                OutputStream out = socket.getOutputStream();
 
-                // send identify packet (opcode 0)
-                String json = gson.toJson(new Message(0, new IdentifyMessage(config.bandoKey, 0, 3)));
-                out.write(json);
+                // send identify packet
+                out.write(new Message(Opcode.IDENTIFY, new IdentifyMessage(config.bandoKey, 0, 3)).toJson());
                 out.flush();
 
                 try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()), INPUT_BUFFER_SIZE)) {
@@ -64,9 +60,8 @@ public class Cluster implements Runnable {
                                 // todo logging
                                 System.out.println("Invalid RPC key! Running cluster without RPC...");
                                 return; // exit the method
-                            case UNKNOWN_OPCODE:
                             default:
-                                System.out.printf("Received message with unknown opcode %d\n", message.op);
+                                System.out.printf("Received message with unhandled opcode %d\n", message.op);
                         }
                     }
                 } finally {
@@ -74,9 +69,8 @@ public class Cluster implements Runnable {
                     out.close();
                 }
             } catch (IOException e) {
-                if (e instanceof ConnectException && e.getMessage().equals("Connection refused: connect")) {
-                    // ignored
-                } else if (e instanceof SocketException && e.getMessage().equals("Connection reset")) {
+                if ((e instanceof ConnectException && e.getMessage().equals("Connection refused: connect"))
+                        || (e instanceof SocketException && e.getMessage().equals("Connection reset"))) {
                     // ignored
                 }
 
@@ -157,6 +151,15 @@ public class Cluster implements Runnable {
         Message(int op, Object data) {
             this.op = op;
             this.data = data;
+        }
+
+        Message(Opcode op, Object data) {
+            this.op = op.id;
+            this.data = data;
+        }
+
+        byte[] toJson() {
+            return gson.toJson(this).getBytes();
         }
     }
 
