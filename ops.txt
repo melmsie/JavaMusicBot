@@ -1,0 +1,76 @@
+Opcode Reference:
+
+General Packet
+--------------
+
+    op: integer
+        The opcode of this message
+    d: object
+        An optional payload of data included with this message
+
+Bot -> Host:
+------------
+
+[0]: Identify Packet
+
+    key: string
+        The secret passphrase used for authentication
+    min: unsigned integer
+        The beginning of the shard range handled by this bot
+    max: unsigned integer
+        The end of the shard range handled by this
+
+[3]: Summons
+
+    op: integer
+        The opcode of the outgoing request
+    param: object
+        An optional payload of data to be included in the outgoing request
+
+    ** The data in this message is effectively the same packet that will be sent to
+       connected bots.
+
+[7]: Status Response
+
+    id: string
+        The unique identifier for the original request, as included in the request
+    guilds: [unsigned integer, unsigned integer]
+        The number of guilds on each shard, keyed by shard id
+    voice: [unsigned integer, unsigned integer]
+        The number of voice connections on each shard, keyed by shard id
+    state: unsigned integer
+        The JDA connection state of this shard
+
+[51]: Restarted OK
+
+[52]: Restart Failed
+
+Host -> Bot:
+------------
+
+[1]: Authenticated
+
+[2]: Authentication Rejected
+
+[6]: Status Request
+    Requests analytical information from the bot
+
+    id: string
+        The unique identifier for this request - should be included in the response
+
+[8]: Status Answer
+    The answer to a [6] Status Request, sent only to the bot who initiated the request.
+
+    ** The payload for this message is the same as a [7] Status Response, without the id
+
+[50]: Restart All Shards
+
+[53]: Rolling Restart
+
+    id: string
+        The unique identifier for this request
+    block_size: integer
+        The number of shards to be restarted at once
+
+[99]: Invalid request
+    The opcode sent was not recognized

@@ -11,7 +11,6 @@ import java.net.Socket;
 import java.net.SocketException;
 
 public class Cluster implements Runnable {
-    private static final int SOCKET_TIMEOUT = 1000;
     // this is the same buffer sized used in bando
     private static final int INPUT_BUFFER_SIZE = 1024;
 
@@ -25,7 +24,7 @@ public class Cluster implements Runnable {
     private final long initialReconnectPause = 2000;
     private long reconnectPause = initialReconnectPause;
 
-    public Cluster(Config config) {
+    Cluster(Config config) {
         this.config = config;
     }
 
@@ -56,15 +55,16 @@ public class Cluster implements Runnable {
                     while ((content = in.readLine()) != null) {
                         Message message = gson.fromJson(content, Message.class);
 
-                        switch (message.op) {
-                            case 1:
+                        switch (Opcode.fromId(message.op)) {
+                            case AUTHENTICATED:
                                 // todo logging
                                 System.out.println("Connected to bando!");
                                 break;
-                            case 2:
+                            case AUTHENTICATION_REJECTED:
                                 // todo logging
                                 System.out.println("Invalid RPC key! Running cluster without RPC...");
                                 return; // exit the method
+                            case UNKNOWN_OPCODE:
                             default:
                                 System.out.printf("Received message with unknown opcode %d\n", message.op);
                         }
@@ -74,8 +74,6 @@ public class Cluster implements Runnable {
                     out.close();
                 }
             } catch (IOException e) {
-
-
                 if (e instanceof ConnectException && e.getMessage().equals("Connection refused: connect")) {
                     // ignored
                 } else if (e instanceof SocketException && e.getMessage().equals("Connection reset")) {
@@ -117,6 +115,38 @@ public class Cluster implements Runnable {
                 // set the next pause to be twice as long as the last
                 reconnectPause += reconnectPause;
             }
+        }
+    }
+
+    enum Opcode {
+        IDENTIFY(0),
+        AUTHENTICATED(1),
+        AUTHENTICATION_REJECTED(2),
+        SUMMONS(3),
+        STATUS_REQUEST(6),
+        STATUS_RESPONSE(7),
+        STATUS_ANSWER(8),
+        RESTART_ALL_SHARDS(50),
+        RESTART_SUCCESS(51),
+        RESTART_FAILURE(52),
+        ROLLING_RESTART(53),
+        INVALID_REQUEST(99),
+        UNKNOWN_OPCODE(-1);
+
+        int id;
+
+        Opcode(int id) {
+            this.id = id;
+        }
+
+        static Opcode fromId(int id) {
+            for (Opcode opcode : Opcode.values()) {
+                if (opcode.id == id) {
+                    return opcode;
+                }
+            }
+
+            return Opcode.UNKNOWN_OPCODE;
         }
     }
 
