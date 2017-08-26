@@ -37,6 +37,9 @@ public final class MusicBot {
     private static ConfigLoadResult configs = null;
 
     public static void main(String[] args) {
+        Cluster cluster = new Cluster(MusicBot.getConfigs().config);
+        cluster.run();
+
         if (args.length == 0) {
             new ShardManager();
             return;

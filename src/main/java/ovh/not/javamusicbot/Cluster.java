@@ -2,12 +2,17 @@ package ovh.not.javamusicbot;
 
 import com.google.gson.Gson;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
-import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 public class Cluster implements Runnable {
     // this is the same buffer sized used in bando
@@ -17,6 +22,7 @@ public class Cluster implements Runnable {
     private final Config config;
 
     private boolean running = true;
+    private Optional<OutputStream> out = Optional.empty();
 
     // reconnection states
     private boolean reconnecting = false;
@@ -41,7 +47,7 @@ public class Cluster implements Runnable {
                     reconnectPause = initialReconnectPause;
                 }
 
-                OutputStream out = socket.getOutputStream();
+                out = Optional.of(socket.getOutputStream());
 
                 // send identify packet
                 send(out, new Message(Opcode.IDENTIFY, new IdentifyMessage(config.bandoKey, 0, 3)));
@@ -51,22 +57,54 @@ public class Cluster implements Runnable {
                     while ((content = in.readLine()) != null) {
                         Message message = gson.fromJson(content, Message.class);
 
+                        // todo logging
                         switch (Opcode.fromId(message.op)) {
                             case AUTHENTICATED:
-                                // todo logging
                                 System.out.println("Connected to bando!");
                                 break;
                             case AUTHENTICATION_REJECTED:
-                                // todo logging
                                 System.out.println("Invalid RPC key! Running cluster without RPC...");
                                 return; // exit the method
+                            case STATUS_REQUEST: {
+                                String json = gson.toJson(message.data);
+                                StatusRequestMessage request = gson.fromJson(json, StatusRequestMessage.class);
+                                System.out.println("Received status request with id " + request.id);
+
+                                StatusResponseMessage response = new StatusResponseMessage(request.id);
+                                /* todo this
+                                shards.forEach(shard -> {
+                                    int id = shard.getId();
+                                    JDA jda = shard.getJDA();
+                                    List<Guild> guilds = jda.getGuilds();
+
+                                    response.guilds.put(id, guilds.size());
+                                    response.voice.put(id, (int) guilds.stream()
+                                        .filter(guild -> guild.getAudioManager().isConnected())
+                                        .count());
+                                    response.states.put(id, jda.getStatus().ordinal());
+                                });
+                                 */
+                                break;
+                            }
+                            case STATUS_ANSWER: {
+                                String json = gson.toJson(message.data);
+                                StatusAnswer answer = gson.fromJson(json, StatusAnswer.class);
+                                // todo pass answer to whatever requested it lol
+                                break;
+                            }
                             default:
                                 System.out.printf("Received message with unhandled opcode %d\n", message.op);
                         }
                     }
                 } finally {
                     // close the output stream. the input stream should be auto closed
-                    out.close();
+                    out.ifPresent(outputStream -> {
+                        try {
+                            outputStream.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
                 }
             } catch (IOException e) {
                 if ((e instanceof ConnectException && e.getMessage().equals("Connection refused: connect"))
@@ -112,9 +150,10 @@ public class Cluster implements Runnable {
         }
     }
 
-    private void send(OutputStream out, Message message) throws IOException {
-        out.write(message.toJson());
-        out.flush();
+    private void send(Optional<OutputStream> out, Message message) throws IOException {
+        OutputStream o = out.get();
+        o.write(message.toJson());
+        o.flush();
     }
 
     enum Opcode {
@@ -173,6 +212,48 @@ public class Cluster implements Runnable {
             this.key = key;
             this.min = min;
             this.max = max;
+        }
+    }
+
+    class StatusRequestMessage {
+        String id;
+
+        StatusRequestMessage(String id) {
+            this.id = id;
+        }
+    }
+
+    class StatusResponseMessage {
+        String id;
+        Map<Integer, Integer> guilds;
+        Map<Integer, Integer> voice;
+        Map<Integer, Integer> states;
+
+        StatusResponseMessage(String id, Map<Integer, Integer> guilds, Map<Integer, Integer> voice,
+                              Map<Integer, Integer> states) {
+            this.id = id;
+            this.guilds = guilds;
+            this.voice = voice;
+            this.states = states;
+        }
+
+        StatusResponseMessage(String id) {
+            this.id = id;
+            this.guilds = new HashMap<>();
+            this.voice = new HashMap<>();
+            this.states = new HashMap<>();
+        }
+    }
+
+    class StatusAnswer {
+        Map<Integer, Integer> guilds;
+        Map<Integer, Integer> voice;
+        Map<Integer, Integer> states;
+
+        public StatusAnswer(Map<Integer, Integer> guilds, Map<Integer, Integer> voice, Map<Integer, Integer> states) {
+            this.guilds = guilds;
+            this.voice = voice;
+            this.states = states;
         }
     }
 }
