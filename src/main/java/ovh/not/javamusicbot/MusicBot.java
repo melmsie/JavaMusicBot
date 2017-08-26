@@ -23,6 +23,7 @@ public final class MusicBot {
         Cluster cluster = new Cluster(getConfigs().config);
         cluster.run();
 
+        // none of this stuff runs bcus cluster#run is blocking
         RequestConfig requestConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build();
         HttpClient httpClient = HttpClients.custom().setDefaultRequestConfig(requestConfig).build();
         Unirest.setHttpClient(httpClient);

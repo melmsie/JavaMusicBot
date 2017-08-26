@@ -7,6 +7,7 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 
 public class Cluster implements Runnable {
     // this is the same buffer sized used in bando
@@ -43,8 +44,7 @@ public class Cluster implements Runnable {
                 OutputStream out = socket.getOutputStream();
 
                 // send identify packet
-                out.write(new Message(Opcode.IDENTIFY, new IdentifyMessage(config.bandoKey, 0, 3)).toJson());
-                out.flush();
+                send(out, new Message(Opcode.IDENTIFY, new IdentifyMessage(config.bandoKey, 0, 3)));
 
                 try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()), INPUT_BUFFER_SIZE)) {
                     String content;
@@ -112,6 +112,11 @@ public class Cluster implements Runnable {
         }
     }
 
+    private void send(OutputStream out, Message message) throws IOException {
+        out.write(message.toJson());
+        out.flush();
+    }
+
     enum Opcode {
         IDENTIFY(0),
         AUTHENTICATED(1),
@@ -134,13 +139,10 @@ public class Cluster implements Runnable {
         }
 
         static Opcode fromId(int id) {
-            for (Opcode opcode : Opcode.values()) {
-                if (opcode.id == id) {
-                    return opcode;
-                }
-            }
-
-            return Opcode.UNKNOWN_OPCODE;
+            return Arrays.stream(Opcode.values())
+                    .filter(opcode -> opcode.id == id)
+                    .findFirst()
+                    .orElse(Opcode.UNKNOWN_OPCODE);
         }
     }
 
