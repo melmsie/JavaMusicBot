@@ -12,7 +12,6 @@ import java.net.SocketException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 public class Cluster implements Runnable {
     // this is the same buffer sized used in bando
@@ -22,7 +21,7 @@ public class Cluster implements Runnable {
     private final Config config;
 
     private boolean running = true;
-    private Optional<OutputStream> out = Optional.empty();
+    private OutputStream out = null;
 
     // reconnection states
     private boolean reconnecting = false;
@@ -47,7 +46,7 @@ public class Cluster implements Runnable {
                     reconnectPause = initialReconnectPause;
                 }
 
-                out = Optional.of(socket.getOutputStream());
+                out = socket.getOutputStream();
 
                 // send identify packet
                 send(out, new Message(Opcode.IDENTIFY, new IdentifyMessage(config.bandoKey, 0, 3)));
@@ -61,10 +60,18 @@ public class Cluster implements Runnable {
                         switch (Opcode.fromId(message.op)) {
                             case AUTHENTICATED:
                                 System.out.println("Connected to bando!");
+
+
+                                // todo remove this test summons message
+                                send(out, new Message(Opcode.SUMMONS, new SummonsMessage(Opcode.STATUS_REQUEST, null)));
+
+
                                 break;
+
                             case AUTHENTICATION_REJECTED:
                                 System.out.println("Invalid RPC key! Running cluster without RPC...");
                                 return; // exit the method
+
                             case STATUS_REQUEST: {
                                 String json = gson.toJson(message.data);
                                 StatusRequestMessage request = gson.fromJson(json, StatusRequestMessage.class);
@@ -84,27 +91,28 @@ public class Cluster implements Runnable {
                                     response.states.put(id, jda.getStatus().ordinal());
                                 });
                                  */
+
+                                send(out, new Message(Opcode.STATUS_RESPONSE, response));
                                 break;
                             }
+
                             case STATUS_ANSWER: {
+                                System.out.println("Received status answer");
+
                                 String json = gson.toJson(message.data);
                                 StatusAnswer answer = gson.fromJson(json, StatusAnswer.class);
+
                                 // todo pass answer to whatever requested it lol
                                 break;
                             }
+
                             default:
                                 System.out.printf("Received message with unhandled opcode %d\n", message.op);
                         }
                     }
                 } finally {
                     // close the output stream. the input stream should be auto closed
-                    out.ifPresent(outputStream -> {
-                        try {
-                            outputStream.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    });
+                    if (out != null) out.close();
                 }
             } catch (IOException e) {
                 if ((e instanceof ConnectException && e.getMessage().equals("Connection refused: connect"))
@@ -150,10 +158,9 @@ public class Cluster implements Runnable {
         }
     }
 
-    private void send(Optional<OutputStream> out, Message message) throws IOException {
-        OutputStream o = out.get();
-        o.write(message.toJson());
-        o.flush();
+    private void send(OutputStream out, Message message) throws IOException {
+        out.write(message.toJson());
+        out.flush();
     }
 
     enum Opcode {
@@ -212,6 +219,21 @@ public class Cluster implements Runnable {
             this.key = key;
             this.min = min;
             this.max = max;
+        }
+    }
+
+    class SummonsMessage {
+        int op;
+        Object data;
+
+        SummonsMessage(int op, Object data) {
+            this.op = op;
+            this.data = data;
+        }
+
+        SummonsMessage(Opcode op, Object data) {
+            this.op = op.id;
+            this.data = data;
         }
     }
 
