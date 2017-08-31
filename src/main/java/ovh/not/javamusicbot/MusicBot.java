@@ -40,7 +40,7 @@ public final class MusicBot {
         Cluster cluster = new Cluster(MusicBot.getConfigs().config);
         cluster.run();
 
-        if (args.length == 0) {
+        if (args.length < 3) {
             new ShardManager();
             return;
         }
