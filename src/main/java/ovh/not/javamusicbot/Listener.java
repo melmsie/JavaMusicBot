@@ -55,14 +55,14 @@ class Listener extends ListenerAdapter {
             return;
         }
         Command.Context context = command.new Context();
-        context.event = event;
-        context.shard = shard;
+        context.setEvent(event);
+        context.setShard(shard);
         if (matcher.groupCount() > 1) {
             String[] matches = matcher.group(2).split("\\s+");
             if (matches.length > 0 && matches[0].equals("")) {
                 matches = new String[0];
             }
-            context.args = matches;
+            context.setArgs(matches);
         }
         command.on(context);
     }
@@ -81,7 +81,7 @@ class Listener extends ListenerAdapter {
 
         if (config.patreon) {
             for (Member member : event.getGuild().getMembers()) {
-                if ((shard.manager.userManager.hasSupporter(member.getUser())
+                if ((shard.manager.getUserManager().hasSupporter(member.getUser())
                         && (member.isOwner() || member.hasPermission(Permission.ADMINISTRATOR)))
                         || Utils.stringArrayContains(config.owners, member.getUser().getId())) {
                     return;
@@ -120,7 +120,7 @@ class Listener extends ListenerAdapter {
                     .build();
 
             try {
-                MusicBot.HTTP_CLIENT.newCall(request).execute();
+                MusicBot.HTTP_CLIENT.newCall(request).execute().close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -140,7 +140,7 @@ class Listener extends ListenerAdapter {
                     .build();
 
             try {
-                MusicBot.HTTP_CLIENT.newCall(request).execute();
+                MusicBot.HTTP_CLIENT.newCall(request).execute().close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -160,7 +160,7 @@ class Listener extends ListenerAdapter {
                     .build();
 
             try {
-                MusicBot.HTTP_CLIENT.newCall(request).execute();
+                MusicBot.HTTP_CLIENT.newCall(request).execute().close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -169,10 +169,10 @@ class Listener extends ListenerAdapter {
 
     @Override
     public void onGuildLeave(GuildLeaveEvent event) {
-        if (GuildMusicManager.GUILDS.containsKey(event.getGuild())) {
-            GuildMusicManager musicManager = GuildMusicManager.GUILDS.remove(event.getGuild());
-            musicManager.player.stopTrack();
-            musicManager.scheduler.queue.clear();
+        if (GuildMusicManager.getGUILDS().containsKey(event.getGuild())) {
+            GuildMusicManager musicManager = GuildMusicManager.getGUILDS().remove(event.getGuild());
+            musicManager.getPlayer().stopTrack();
+            musicManager.getScheduler().getQueue().clear();
             musicManager.close();
         }
         event.getGuild().getAudioManager().closeAudioConnection();
