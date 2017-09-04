@@ -97,9 +97,9 @@ public class Cluster implements Runnable {
                             }
 
                             case STATUS_ANSWER: {
-                                System.out.println("Received status answer");
-
                                 String json = gson.toJson(message.data);
+                                System.out.println("Received status answer " + json);
+
                                 StatusAnswer answer = gson.fromJson(json, StatusAnswer.class);
 
                                 // todo pass answer to whatever requested it lol
