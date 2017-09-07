@@ -8,6 +8,8 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ovh.not.javamusicbot.Command;
 import ovh.not.javamusicbot.GuildMusicManager;
 import ovh.not.javamusicbot.MusicBot;
@@ -17,6 +19,8 @@ import java.io.IOException;
 
 @SuppressWarnings("ConstantConditions")
 public class LoadCommand extends Command {
+    private static final Logger logger = LoggerFactory.getLogger(LoadCommand.class);
+
     private final AudioPlayerManager playerManager;
 
     public LoadCommand(AudioPlayerManager playerManager) {
@@ -33,7 +37,7 @@ public class LoadCommand extends Command {
         }
 
         if (context.getArgs().length == 0) {
-            context.reply("Usage: `%prefix%load <dumped playlist url>`");
+            context.reply("Usage: `{{prefix}}load <dumped playlist url>`");
             return;
         }
 
@@ -42,8 +46,7 @@ public class LoadCommand extends Command {
         if (musicManager.isOpen() && musicManager.getPlayer().getPlayingTrack() != null
                 && musicManager.getChannel() != channel
                 && !context.getEvent().getMember().hasPermission(musicManager.getChannel(), Permission.VOICE_MOVE_OTHERS)) {
-            context.reply("dabBot is already playing music in " + musicManager.getChannel().getName() + " so it cannot " +
-                    "be moved. Members with the `VOICE_MOVE_OTHERS` permission are exempt from this.");
+            context.reply("dabBot is already playing music in %s so it cannot be moved. Members with the `Move Members` permission can do this.", musicManager.getChannel().getName());
             return;
         }
 
@@ -59,8 +62,8 @@ public class LoadCommand extends Command {
             Response response = MusicBot.HTTP_CLIENT.newCall(request).execute();
             tracks = new JSONArray(response.body().string());
         } catch (IOException | JSONException e) {
-            e.printStackTrace();
-            context.reply("An error occurred! " + e.getMessage());
+            logger.error("error occurred loading tracks from a dump", e);
+            context.reply("An error occurred! %s", e.getMessage());
             return;
         }
 
@@ -76,13 +79,13 @@ public class LoadCommand extends Command {
                 AudioTrack track = Utils.decode(playerManager, encoded);
                 musicManager.getScheduler().queue(track);
             } catch (IOException e) {
-                e.printStackTrace();
-                context.reply("An error occurred! " + e.getMessage());
+                logger.error("error occurred decoding encoded tracks", e);
+                context.reply("An error occurred! %s", e.getMessage());
                 return;
             }
         }
 
-        context.reply(String.format("Loaded %d tracks from <%s>!", tracks.length(), url));
+        context.reply("Loaded %d tracks from <%s>!", tracks.length(), url);
 
         if (!musicManager.isOpen()) {
             musicManager.open(channel, context.getEvent().getAuthor());

@@ -69,7 +69,7 @@ public abstract class Command {
 
         public Message reply(String message) {
             try {
-                return event.getChannel().sendMessage(message.replace("%prefix%", MusicBot.getConfigs().config.prefix))
+                return event.getChannel().sendMessage(message.replace("{{prefix}}", MusicBot.getConfigs().config.prefix))
                         .complete();
             } catch (PermissionException e) {
                 getPrivateChannel(event.getAuthor()).sendMessage("**dabBot does not have permission to talk in the #"
@@ -78,6 +78,10 @@ public abstract class Command {
                         "owner, please send this to them.").complete();
                 return null;
             }
+        }
+
+        public Message reply(String format, Object... args) {
+            return reply(String.format(format, args));
         }
 
         public Set<String> parseFlags() {

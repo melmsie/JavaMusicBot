@@ -23,7 +23,7 @@ public class RadioCommand extends Command {
 
     public static void reloadUsageMessage() {
         StringBuilder builder = new StringBuilder("Streams a variety of radio stations.\n" +
-                "Usage: `%prefix%radio <station>`\n" +
+                "Usage: `{{prefix}}radio <station>`\n" +
                 "\n**Available stations:**\n");
         Iterator<String> iterator = MusicBot.getConfigs().constants.radioStations.keySet().iterator();
         while (iterator.hasNext()) {
@@ -33,7 +33,7 @@ public class RadioCommand extends Command {
                 builder.append(", ");
             }
         }
-        builder.append("\n\nNeed another station? Join the support server with the link in `%prefix%support`.");
+        builder.append("\n\nNeed another station? Join the support server with the link in `{{prefix}}support`.");
         usageMessage = builder.toString();
     }
 
@@ -70,7 +70,7 @@ public class RadioCommand extends Command {
             }
         }
         if (url == null) {
-            context.reply("Invalid station! For usage & stations, use `%prefix%radio`");
+            context.reply("Invalid station! For usage & stations, use `{{prefix}}radio`");
             return;
         }
         VoiceChannel channel = context.getEvent().getMember().getVoiceState().getChannel();
@@ -83,8 +83,7 @@ public class RadioCommand extends Command {
         if (musicManager.isOpen() && musicManager.getPlayer().getPlayingTrack() != null
                 && musicManager.getChannel() != channel
                 && !context.getEvent().getMember().hasPermission(musicManager.getChannel(), Permission.VOICE_MOVE_OTHERS)) {
-            context.reply("dabBot is already playing music in " + musicManager.getChannel().getName() + " so it cannot " +
-                    "be moved. Members with the `VOICE_MOVE_OTHERS` permission are exempt from this.");
+            context.reply("dabBot is already playing music in %s so it cannot be moved. Members with the `Move Members` permission can do this.", musicManager.getChannel().getName());
             return;
         }
         LoadResultHandler handler = new LoadResultHandler(commandManager, musicManager, playerManager, context);

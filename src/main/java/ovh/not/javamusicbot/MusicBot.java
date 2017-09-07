@@ -5,12 +5,16 @@ import com.moandjiezana.toml.Toml;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
 public final class MusicBot {
-    private static final String CONFIG_PATH = "config.toml";
-    private static final String CONSTANTS_PATH = "constants.toml";
+    private static final Logger logger = LoggerFactory.getLogger(MusicBot.class);
+
+    public static final String CONFIG_PATH = "config.toml";
+    public static final String CONSTANTS_PATH = "constants.toml";
     public static final String USER_AGENT = "JavaMusicBot (https://github.com/sponges/JavaMusicBot)";
     public static final Gson GSON = new Gson();
     public static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json");
@@ -29,7 +33,7 @@ public final class MusicBot {
                 // logging
                 String method = request.method();
                 String uri = request.url().uri().toString();
-                System.out.printf("%s %s\n", method, uri);
+                logger.info("OkHttpClient: {} {}", method, uri);
 
                 return chain.proceed(request);
             }).build();
@@ -44,10 +48,15 @@ public final class MusicBot {
             new ShardManager();
             return;
         }
-        int shardCount = Integer.parseInt(args[0]);
-        int minShard = Integer.parseInt(args[1]);
-        int maxShard = Integer.parseInt(args[2]);
-        new ShardManager(shardCount, minShard, maxShard);
+
+        try {
+            int shardCount = Integer.parseInt(args[0]);
+            int minShard = Integer.parseInt(args[1]);
+            int maxShard = Integer.parseInt(args[2]);
+            new ShardManager(shardCount, minShard, maxShard);
+        } catch (Exception ex) {
+            logger.warn("Could not instantiate with given variables");
+        }
     }
 
     public static ConfigLoadResult getConfigs() {

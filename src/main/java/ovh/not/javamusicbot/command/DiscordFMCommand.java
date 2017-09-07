@@ -6,6 +6,8 @@ import net.dv8tion.jda.core.entities.Message;
 import net.dv8tion.jda.core.entities.VoiceChannel;
 import net.dv8tion.jda.core.utils.IOUtil;
 import org.json.JSONArray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ovh.not.javamusicbot.Command;
 import ovh.not.javamusicbot.CommandManager;
 import ovh.not.javamusicbot.GuildMusicManager;
@@ -18,6 +20,8 @@ import java.util.stream.Collectors;
 
 @SuppressWarnings("ConstantConditions")
 public class DiscordFMCommand extends Command {
+    private static final Logger logger = LoggerFactory.getLogger(DiscordFMCommand.class);
+
     private static final String DFM_DIRECTORY_PATH = "discordfm/";
 
     private final CommandManager commandManager;
@@ -37,7 +41,7 @@ public class DiscordFMCommand extends Command {
                 .sorted(Comparator.comparing(o -> o.name))
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        StringBuilder builder = new StringBuilder("Uses a song playlist from http://discord.fm\nUsage: `%prefix%dfm <library>`" +
+        StringBuilder builder = new StringBuilder("Uses a song playlist from the now defunct Discord.FM\nUsage: `{{prefix}}dfm <library>`" +
                 "\n\n**Available libraries:**\n");
 
         Iterator<Library> iterator = libraries.iterator();
@@ -78,8 +82,7 @@ public class DiscordFMCommand extends Command {
         if (musicManager.isOpen() && musicManager.getPlayer().getPlayingTrack() != null
                 && musicManager.getChannel() != channel
                 && !context.getEvent().getMember().hasPermission(musicManager.getChannel(), Permission.VOICE_MOVE_OTHERS)) {
-            context.reply("dabBot is already playing music in " + musicManager.getChannel().getName() + " so it cannot " +
-                    "be moved. Members with the `VOICE_MOVE_OTHERS` permission are exempt from this.");
+            context.reply("dabBot is already playing music in %s so it cannot be moved. Members with the `Move Members` permission can do this.", musicManager.getChannel().getName());
             return;
         }
 
@@ -90,7 +93,7 @@ public class DiscordFMCommand extends Command {
                 .findFirst();
 
         if (!library.isPresent()) {
-            context.reply("Invalid library! Use `%prefix%dfm` to see usage & libraries.");
+            context.reply("Invalid library! Use `{{prefix}}dfm` to see usage & libraries.");
             return;
         }
 
@@ -98,7 +101,7 @@ public class DiscordFMCommand extends Command {
         try {
             songs = library.get().getSongs();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("error getting discord.fm queue", e);
             context.reply("An error occurred!");
             return;
         }

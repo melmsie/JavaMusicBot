@@ -4,6 +4,8 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import me.bramhaag.owo.OwO;
 import okhttp3.*;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ovh.not.javamusicbot.Command;
 import ovh.not.javamusicbot.GuildMusicManager;
 import ovh.not.javamusicbot.MusicBot;
@@ -19,6 +21,8 @@ import static ovh.not.javamusicbot.Utils.*;
 
 @SuppressWarnings("unchecked")
 public class QueueCommand extends Command {
+    private static final Logger logger = LoggerFactory.getLogger(QueueCommand.class);
+
     private static final String BASE_LINE = "%s by %s `[%s]`";
     private static final String CURRENT_LINE = "__Currently playing:__\n" + BASE_LINE;
     private static final String QUEUE_LINE = "\n`%02d` " + BASE_LINE;
@@ -40,7 +44,7 @@ public class QueueCommand extends Command {
     public void on(Context context) {
         GuildMusicManager musicManager = GuildMusicManager.get(context.getEvent().getGuild());
         if (musicManager == null || musicManager.getPlayer().getPlayingTrack() == null) {
-            context.reply("No music is queued or playing on this guild!");
+            context.reply("No music is queued or playing on this guild! Add some using `{{prefix}}play <song name/link>`");
             return;
         }
         AudioTrack playing = musicManager.getPlayer().getPlayingTrack();
@@ -55,17 +59,17 @@ public class QueueCommand extends Command {
                 durationTotal += track.getDuration();
                 items.append(String.format("\n%02d %s by %s [%s/%s]", i + 1, track.getInfo().title,
                         track.getInfo().author, formatDuration(track.getPosition()),
-                        formatDuration(track.getDuration())));
+                        formatTrackDuration(track)));
             }
             builder.append(String.format("Song queue for %s - %d songs (%s).\nCurrent song: %s by %s [%s/%s]\n",
                     context.getEvent().getGuild().getName(), queue.size(), formatLongDuration(durationTotal), playing.getInfo().title,
                     playing.getInfo().author, formatDuration(playing.getPosition()),
-                    formatDuration(playing.getDuration())));
+                    formatTrackDuration(playing)));
             builder.append(items.toString());
-            owo.upload(builder.toString(), "text/plain").execute(file -> {
-                context.reply("Full song queue: " + file.getFullUrl());
+            owo.upload(builder.toString(), "text/plain; charset=utf-8").execute(file -> {
+                context.reply("Full song queue: %s", file.getFullUrl());
             }, throwable -> {
-                throwable.printStackTrace();
+                logger.error("error uploading to owo", throwable);
 
                 RequestBody body = RequestBody.create(JSON_MEDIA_TYPE, builder.toString());
 
@@ -77,21 +81,21 @@ public class QueueCommand extends Command {
                 MusicBot.HTTP_CLIENT.newCall(request).enqueue(new Callback() {
                     @Override
                     public void onFailure(@Nonnull Call call, @Nonnull IOException e) {
-                        e.printStackTrace();
-                        context.reply("An error occured!");
+                        logger.error("error occurred posting to hastebin.com", e);
+                        context.reply("An error occurred!");
                     }
 
                     @Override
                     public void onResponse(@Nonnull Call call, @Nonnull Response response) throws IOException {
-                        context.reply(String.format("Full song queue: https://hastebin.com/raw/%s",
-                                new JSONObject(response.body().string()).getString("key")));
+                        context.reply("Full song queue: https://hastebin.com/raw/%s",
+                                new JSONObject(response.body().string()).getString("key"));
                         response.close();
                     }
                 });
             });
         } else {
             builder.append(String.format(CURRENT_LINE, playing.getInfo().title, playing.getInfo().author,
-                    formatDuration(playing.getPosition()) + "/" + formatDuration(playing.getDuration())));
+                    formatDuration(playing.getPosition()) + "/" + formatTrackDuration(playing)));
             Pageable<AudioTrack> pageable = new Pageable<>((List<AudioTrack>) queue);
             pageable.setPageSize(PAGE_SIZE);
             if (context.getArgs().length > 0) {
@@ -99,13 +103,13 @@ public class QueueCommand extends Command {
                 try {
                     page = Integer.parseInt(context.getArgs()[0]);
                 } catch (NumberFormatException e) {
-                    context.reply(String.format("Invalid page! Must be an integer within the range %d - %d",
-                            pageable.getMinPageRange(), pageable.getMaxPages()));
+                    context.reply("Invalid page! Must be an integer within the range %d - %d",
+                            pageable.getMinPageRange(), pageable.getMaxPages());
                     return;
                 }
                 if (page < pageable.getMinPageRange() || page > pageable.getMaxPages()) {
-                    context.reply(String.format("Invalid page! Must be an integer within the range %d - %d",
-                            pageable.getMinPageRange(), pageable.getMaxPages()));
+                    context.reply("Invalid page! Must be an integer within the range %d - %d",
+                            pageable.getMinPageRange(), pageable.getMaxPages());
                     return;
                 }
                 pageable.setPage(page);
@@ -116,12 +120,12 @@ public class QueueCommand extends Command {
             int index = 1;
             for (AudioTrack track : pageable.getListForPage()) {
                 builder.append(String.format(QUEUE_LINE, ((pageable.getPage() - 1) * pageable.getPageSize()) + index, track.getInfo().title, track.getInfo().author,
-                        formatDuration(track.getDuration())));
+                        formatTrackDuration(track)));
                 index++;
             }
             if (pageable.getPage() < pageable.getMaxPages()) {
-                builder.append("\n\n__To see the next page:__ `%prefix%queue ").append(pageable.getPage() + 1)
-                        .append("`\nTo see the full queue, use `%prefix%queue all`");
+                builder.append("\n\n__To see the next page:__ `{{prefix}}queue ").append(pageable.getPage() + 1)
+                        .append("`\nTo see the full queue, use `{{prefix}}queue all`");
             }
             context.reply(builder.toString());
         }

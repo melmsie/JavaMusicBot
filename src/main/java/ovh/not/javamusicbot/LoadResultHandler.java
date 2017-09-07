@@ -5,15 +5,19 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static ovh.not.javamusicbot.Utils.formatDuration;
 
 public class LoadResultHandler implements AudioLoadResultHandler {
+    private static final Logger logger = LoggerFactory.getLogger(LoadResultHandler.class);
+
     private final CommandManager commandManager;
     private final GuildMusicManager musicManager;
     private final AudioPlayerManager playerManager;
     private final Command.Context context;
-
+  
     private boolean verbose;
     private boolean isSearch;
     private boolean allowSearch;
@@ -44,8 +48,8 @@ public class LoadResultHandler implements AudioLoadResultHandler {
         } else if (audioPlaylist.isSearchResult()) {
             int playlistSize = audioPlaylist.getTracks().size();
             if (playlistSize == 0) {
-                context.reply("No song matches found! Usage: `%prefix%play <link or youtube video title>` or " +
-                        "`%prefix%soundcloud <soundcloud song title>`");
+                context.reply("No song matches found! Usage: `{{prefix}}play <link or youtube video title>` or " +
+                        "`{{prefix}}soundcloud <soundcloud song title>`");
                 if (musicManager.getPlayer().getPlayingTrack() == null && musicManager.getScheduler().getQueue().isEmpty()) {
                     musicManager.close();
                 }
@@ -80,8 +84,8 @@ public class LoadResultHandler implements AudioLoadResultHandler {
     public void noMatches() {
         if (verbose) {
             if (isSearch) {
-                context.reply("No song matches found! Usage: `%prefix%play <link or youtube video title>` or " +
-                        "`%prefix%soundcloud <soundcloud song title>`");
+                context.reply("No song matches found! Usage: `{{prefix}}play <link or youtube video title>` or " +
+                        "`{{prefix}}soundcloud <soundcloud song title>`");
                 if (context.getEvent().getGuild().getAudioManager().isConnected() &&
                         musicManager.getPlayer().getPlayingTrack() == null && musicManager.getScheduler().getQueue().isEmpty()) {
                     musicManager.close();
@@ -95,8 +99,9 @@ public class LoadResultHandler implements AudioLoadResultHandler {
 
     @Override
     public void loadFailed(FriendlyException e) {
+        logger.info("track load failed", e);
         if (verbose) {
-            context.reply("An error occurred: " + e.getMessage());
+            context.reply("An error occurred: " + e.getMessage() + "\nPlease note that dabBot is primarily hosted in Canada and therefore cannot play songs that are blocked for copyright in Canada.");
         }
     }
 
